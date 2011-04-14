@@ -1,0 +1,200 @@
+<?php
+// $Id: form.module,v 1.6 2009/12/13 19:00:29 davereid Exp $
+
+/**
+ * @file
+ * Form module functionality.
+ *
+ * @todo Increase module weight, since #process does not work on 'form' in D6.
+ */
+
+/**
+ * Implements hook_perm().
+ */
+function form_perm() {
+  return array('administer forms');
+}
+
+/**
+ * Implements hook_menu().
+ */
+function form_menu() {
+  $items['admin/form'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('form_form'),
+    'access arguments' => array('administer forms'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function form_form_alter(&$form, &$form_state, $form_id) {
+  static $implementations;
+  if (!isset($implementations)) {
+    $implementations = (bool) module_implements('form_info');
+  }
+  if ($form_id == 'form_form' || !$implementations || !isset($form['form_id']['#value'])) {
+    return;
+  }
+  // @todo This breaks form submissions in D6, so we have to inline the code :(
+  /*
+  $form['#input'] = TRUE;
+  $form['#process'][] = 'form_process_form';
+  */
+  form_process_form($form, array(), $form_state);
+
+  if (!user_access('administer forms') || !isset($form['form_build_id']['#value'])) {
+    return;
+  }
+
+  // @todo Toggle this + form globally, auto-disable after 6 hours.
+  $form += array('#cache' => TRUE, '#prefix' => '');
+
+  // Store page title for potential usage in implementation forms.
+  $form['#form']['title'] = drupal_set_title();
+
+  // Output a contextual configuration link.
+  $output = '<div class="form-controller">';
+  $output .= l(t('Configure this form'), 'admin/form/' . $form['form_build_id']['#value'], array('query' => drupal_get_destination()));
+  $output .= '</div>';
+  $form['#prefix'] .= $output . $form['#prefix'];
+}
+
+/**
+ * Form builder to control form alterations.
+ */
+function form_form(&$form_state, $form_build_id, $target_form_id = NULL) {
+  // Reload form from cache.
+  $form_state = array('storage' => NULL, 'submitted' => FALSE);
+  $cached_form = form_get_cache($form_build_id, $form_state);
+  $cached_form['#post'] = array();
+
+  // Rebuild cached form.
+  $form_id = $cached_form['form_id']['#value'];
+  $processed_form = form_builder($form_id, $cached_form, $form_state);
+
+  // Build form information.
+  $form_elements = form_get_elements($processed_form);
+  $context = array(
+    'form_id' => $form_id,
+    'form' => $processed_form,
+    'elements' => $form_elements,
+  );
+  $form_state['form'] = $context;
+
+  drupal_set_title(t('Configure %title form (@form_id)', array(
+    '%title' => $cached_form['#form']['title'],
+    '@form_id' => $form_id,
+  )));
+
+  $form = array();
+  $alterations = module_invoke_all('form_info');
+  foreach ($alterations as $name => $info) {
+    // Fetch configuration form.
+    // @todo Take over configuration storage for most/simple implementations.
+    if (isset($info['form callback']) && function_exists($info['form callback'])) {
+      $function = $info['form callback'];
+      $settings = $function($form, $form_id, $context);
+      if (isset($settings) && is_array($settings)) {
+        $form[$name] = array(
+          '#type' => 'fieldset',
+          '#title' => check_plain($info['title']),
+          '#description' => check_plain($info['description']),
+          '#collapsible' => TRUE,
+          //'#collapsed' => TRUE,
+          '#tree' => TRUE,
+        );
+        $form[$name] += $settings;
+      }
+    }
+  }
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+  if (isset($_GET['destination'])) {
+    $form['cancel'] = array(
+      '#type' => 'markup',
+      '#value' => l(t('Cancel'), $_GET['destination']),
+    );
+  }
+
+  return $form;
+}
+
+/**
+ * Helper function to retrieve all user input fields in a form.
+ *
+ * This was mainly designed for Form controller implementations like Mollom,
+ * which want to do something with all exposed user input widgets in a form.
+ * I currently can't think of other implementations that would want to retrieve
+ * all widgets, so we limit this to real user input elements.
+ */
+function form_get_elements($elements) {
+  static $input = array('textfield', 'textarea');
+
+  $items = array();
+  foreach (element_children($elements) as $key) {
+    // @todo Find a better way to skip form-controlled elements.
+    //   Wait. Why should we skip any possibly valid and useful form elements?
+    //   Anything that's contained in the form may be used by any implementation, no?
+    if (isset($elements[$key]['#form'])) {
+      continue;
+    }
+    // Skip autocomplete widgets.
+    if (!empty($elements[$key]['#autocomplete_path'])) {
+      continue;
+    }
+    // Skip elements without a #type.
+    if (isset($elements[$key]['#type']) && in_array($elements[$key]['#type'], $input)) {
+      $items[] = $elements[$key];
+    }
+    // Recurse into children, if there are any.
+    if (element_children($elements[$key])) {
+      // @todo Do we want to key by $key?
+      $items = array_merge($items, form_get_elements($elements[$key]));
+    }
+  }
+  return $items;
+}
+
+function form_process_form(&$element, $edit, &$form_state) {
+  // Build form information.
+  $form_id = $element['form_id']['#value'];
+  $form_elements = form_get_elements($element);
+  $context = array(
+    'form_id' => $form_id,
+    'form' => $element,
+    'elements' => $form_elements,
+  );
+  $form_state['form'] = $context;
+
+  // @todo Cache this.
+  foreach (module_invoke_all('form_info') as $name => $info) {
+    if (!empty($info['process callback']) && function_exists($info['process callback'])) {
+      $function = $info['process callback'];
+      $function($element, $form_state, $form_id, $form_elements);
+    }
+  }
+
+  // return $element;
+}
+
+function form_get_value($form_state, $parents) {
+  $values = $form_state['values'];
+  foreach ($parents as $parent) {
+    $values = (isset($values[$parent]) ? $values[$parent] : NULL);
+  }
+  return $values;
+}
+
+// @see http://drupal.org/node/633058 for a D7 patch.
+function form_validate_username($element, &$form_state) {
+  if (!empty($element['#value']) && !($account = user_load(array('name' => $element['#value'])))) {
+    form_error($element, t('The username %name does not exist.', array('%name' => $element['#value'])));
+  }
+}

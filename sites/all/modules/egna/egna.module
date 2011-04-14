@@ -1,0 +1,227 @@
+<?php
+ 
+ 
+function egna_form_alter(&$form, $form_state, $form_id) {
+
+//echo "<pre>";
+//print_r($form);
+//echo "</pre>";
+
+switch ($form['#id']) {
+
+//id på form är case
+
+case 'views-exposed-form-Soka-page-1':
+$form['#action'] = '/sok';
+break;
+
+case 'views-exposed-form-Soka-page-2':
+$form['#action'] = '/sok';
+$form['edit-fritext']['#size'] = '40';
+
+
+break;
+
+case 'views-exposed-form-Soka-page-3':
+$form['#action'] = '/sok';
+break;
+
+case 'views-exposed-form-Soka-page-4':
+$form['#action'] = '/sok';
+break;
+
+case 'views-exposed-form-Soka-page-5':
+$form['#action'] = '/sok';
+break;
+
+case 'views-exposed-form-Soka-page-6':
+$form['#action'] = '/sok';
+break;
+
+case 'views-exposed-form-Soka-page-7':
+$form['#action'] = '/sok';
+break;
+
+case 'edit-field-kommun-delregion-value-wrapper':
+$form['#action'] = '/sok';
+$form['submit']['#id'] = 'form-submit-form2';
+
+
+break;
+
+
+}
+
+
+
+}
+
+function egna_views_query_alter(&$view,&$query) {
+
+if ($view->name=='sortering_sok'||$view->name=='Soka') {
+    $sort = $_REQUEST['sort-order'];
+    if ( $sort == 'desc' ) {
+            $query->orderby[0] = 'node_title DESC';
+    }
+    else {
+              $query->orderby[0] = 'node_title ASC';
+    }
+  }
+
+}
+
+function egna_search_parse_query($text) {
+  $keys = array('positive' => array(), 'negative' => array());
+
+  // Tokenize query string
+  preg_match_all('/ (-?)("[^"]+"|[^" ]+)/i', ' '. $text, $matches, PREG_SET_ORDER);
+
+  if (count($matches) < 1) {
+    return NULL;
+  }
+
+  // Classify tokens
+  $or = FALSE;
+  $warning = '';
+  $simple = TRUE;
+  foreach ($matches as $match) {
+    $phrase = FALSE;
+    // Strip off phrase quotes
+    if ($match[2]{0} == '"') {
+      $match[2] = substr($match[2], 1, -1);
+      $phrase = TRUE;
+      $simple = FALSE;
+    }
+    // Simplify keyword according to indexing rules and external preprocessors
+    $words = search_simplify($match[2]);
+    // Re-explode in case simplification added more words, except when matching a phrase
+    $words = $phrase ? array($words) : preg_split('/ /', $words, -1, PREG_SPLIT_NO_EMPTY);
+    // Negative matches
+    if ($match[1] == '-') {
+      $keys['negative'] = array_merge($keys['negative'], $words);
+    }
+    // OR operator: instead of a single keyword, we store an array of all
+    // OR'd keywords.
+    elseif ($match[2] == 'OR' && count($keys['positive'])) {
+      $last = array_pop($keys['positive']);
+      // Starting a new OR?
+      if (!is_array($last)) {
+        $last = array($last);
+      }
+      $keys['positive'][] = $last;
+      $or = TRUE;
+      continue;
+    }
+    // AND operator: implied, so just ignore it
+    elseif ($match[2] == 'AND' || $match[2] == 'and') {
+      $warning = $match[2];
+      continue;
+    }
+
+    // Plain keyword
+    else {
+      if ($match[2] == 'or') {
+        $warning = $match[2];
+      }
+      if ($or) {
+        // Add to last element (which is an array)
+        $keys['positive'][count($keys['positive']) - 1] = array_merge($keys['positive'][count($keys['positive']) - 1], $words);
+      }
+      else {
+        $keys['positive'] = array_merge($keys['positive'], $words);
+      }
+    }
+    $or = FALSE;
+  }
+
+  // Convert keywords into SQL statements.
+  $query = array();
+  $query2 = array();
+  $arguments = array();
+  $arguments2 = array();
+  $matches = 0;
+  $simple_and = FALSE;
+  $simple_or = FALSE;
+  // Positive matches
+  foreach ($keys['positive'] as $key) {
+    // Group of ORed terms
+    if (is_array($key) && count($key)) {
+      $simple_or = TRUE;
+      $queryor = array();
+      $any = FALSE;
+      foreach ($key as $or) {
+        list($q, $num_new_scores) = _search_parse_query($or, $arguments2);
+        $any |= $num_new_scores;
+        if ($q) {
+          $queryor[] = $q;
+          $arguments[] = $or;
+        }
+      }
+      if (count($queryor)) {
+        $query[] = '('. implode(' OR ', $queryor) .')';
+        // A group of OR keywords only needs to match once
+        $matches += ($any > 0);
+      }
+    }
+    // Single ANDed term
+    else {
+      $simple_and = TRUE;
+      list($q, $num_new_scores, $num_valid_words) = _search_parse_query($key, $arguments2);
+      if ($q) {
+        $query[] = $q;
+        $arguments[] = $key;
+        if (!$num_valid_words) {
+          $simple = FALSE;
+        }
+        // Each AND keyword needs to match at least once
+        $matches += $num_new_scores;
+      }
+    }
+  }
+  if ($simple_and && $simple_or) {
+    $simple = FALSE;
+  }
+  // Negative matches
+  foreach ($keys['negative'] as $key) {
+    list($q) = _search_parse_query($key, $arguments2, TRUE);
+    if ($q) {
+      $query[] = $q;
+      $arguments[] = $key;
+      $simple = FALSE;
+    }
+  }
+  $query = implode(' AND ', $query);
+
+  // Build word-index conditions for the first pass
+#  $query2 = substr(str_repeat("i.word = '%s' OR ", count($arguments2)), 0, -4);
+$query2 = substr(str_repeat("i.word like '%%%s%%' OR ", count($arguments2)), 0, -4);
+  return array($query, $arguments, $query2, $arguments2, $matches, $simple, $warning);
+}
+
+/**
+ * Helper function for search_parse_query();
+ */
+
+
+function egna__search_parse_query(&$word, &$scores, $not = FALSE) {
+  $num_new_scores = 0;
+  $num_valid_words = 0;
+  // Determine the scorewords of this word/phrase
+  if (!$not) {
+    $split = explode(' ', $word);
+    foreach ($split as $s) {
+      $num = is_numeric($s);
+      if ($num || drupal_strlen($s) >= variable_get('minimum_word_size', 3)) {
+        $s = $num ? ((int)ltrim($s, '-0')) : $s;
+        if (!isset($scores[$s])) {
+          $scores[$s] = $s;
+          $num_new_scores++;
+        }
+        $num_valid_words++;
+      }
+    }
+  }
+  // Return matching snippet and number of added words
+#  return array("d.data ". ($not ? 'NOT ' : '') ."LIKE '%% %s %%'", $num_new_scores, $num_valid_words);
+return array("d.data ". ($not ? 'NOT ' : '') ."LIKE '%%%s%%'", $num_new_scores, $num_valid_words);
+}

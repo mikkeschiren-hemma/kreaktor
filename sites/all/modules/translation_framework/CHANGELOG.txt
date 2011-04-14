@@ -1,0 +1,8 @@
+// $id:
+
+TRANSLATION_FRAMEWOR 6.x.1.2
+============================
+Main Features:
+  * Reworked the translation framework to remove un-necessary functions in the system
+  * Updated the google portion to now work with google and its 500 char limit
+

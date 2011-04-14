@@ -1,0 +1,13 @@
+; $Id: form__test.info,v 1.1 2009/12/08 04:23:28 davereid Exp $
+name = Form test module
+description = Test module for the form module.
+core = 6.x
+package = Testing
+hidden = TRUE
+
+; Information added by drupal.org packaging script on 2009-12-14
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "form"
+datestamp = "1260749169"
+

@@ -1,0 +1,20 @@
+<?php
+// $Id: admin_menu_dropdown.install,v 1.1.2.1 2008/06/25 07:20:08 deciphered Exp $
+
+/**
+ * @file
+ * Uninstall Admin Menu Dropdown settings
+ */
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function admin_menu_dropdown_uninstall() {
+  variable_del('admin_menu_dropdown_hide');
+  variable_del('admin_menu_dropdown_position');
+  variable_del('admin_menu_dropdown_behavior');
+  variable_del('admin_menu_dropdown_visibility_modifier');
+  variable_del('admin_menu_dropdown_visibility_key');
+  variable_del('admin_menu_dropdown_disable_modifier');
+  variable_del('admin_menu_dropdown_disable_key');
+}

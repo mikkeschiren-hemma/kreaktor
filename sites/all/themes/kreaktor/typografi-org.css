@@ -1,0 +1,178 @@
+/*
+typografi för Kreaktor
+*/
+.content legend
+{
+color: black;
+font-weight: normal;
+margin-left: -3px;
+}
+.content legend
+{
+color: black;
+font-weight: normal;
+margin-left: -3px;
+}
+.kort h1, h2, h3, h4, h5, h6
+{
+color: black;
+}
+.kort li, .kort p
+{
+margin-bottom: 1em;
+}
+.kort fieldset
+{
+padding-top: 10px;
+padding-left: 30px;
+}
+
+
+.sokrubrik
+
+{
+height: 1.4em;
+border-bottom: 1px solid #c8c8c8;
+}
+
+.sokrubriken
+{
+background-color: white;
+padding-right: 0.5em;
+}
+
+.soknodtyp
+{
+background-color: white;
+padding-left: 0.5em;
+}
+fieldset h1, fieldset h2, fieldset h3, fieldset h4, fieldset h5, fieldset h6, fieldset ol, fieldset ul
+{
+width: 70%;
+}
+
+fieldset p
+{
+width: 70%;
+font-size: 1.1em;
+}
+
+
+.sokrutan a
+{
+color: black !important;
+}
+
+.sokrutan legend a
+{
+font-weight: normal
+}
+.page-test-sok2 h1.title
+{
+display: none;
+}
+
+p.search-snippet
+{
+width: 520px;
+}
+
+
+.content h1
+{
+font-size: 2.1em;
+margin-left: 2px;
+}
+
+.content .node p
+{
+font-size: 1.1em;
+}
+
+#kalendarielistning small
+{
+font-style: italic;
+}
+
+#kalendarielistning p
+{
+margin-bottom: 10px;
+line-height: 1.2em;
+}
+
+.sokrutan fieldset
+{
+padding: 0;
+margin-bottom: 3px;
+margin-top: -10px;
+}
+.sokrutan legend
+{
+font-weight: 100;
+}
+
+.sokrutan
+{
+padding: 8px;
+border: 1px solid #bfbdb9;
+background-color:#f0efe9;
+margin-bottom: 30px;
+}
+.sokgra
+{
+color: #6b6b6b;
+}
+body.front .content h3
+{
+margin: 0.9em 0 0.3em 0;
+
+}
+
+#textklicksok div.grupp1
+{
+margin-left: 15px;
+}
+#textklicksok h4
+{
+width: 100%;
+color: #2c5bb8;
+font-weight: bold;
+text-transform: uppercase;
+text-decoration: underline;
+}
+
+body.front .content p
+{
+margin: 0.2em;
+}
+
+.sokrubriken
+{
+font-size: 1.2em;
+font-weight: bold;
+float:left;
+color: #b50000;
+}
+.sokrubriken a
+{
+color: #b50000;
+}
+
+p.hela
+{
+margin-bottom: 20px;
+}
+.fottext
+{
+color: white;
+}
+#content-inner h1.title
+{
+margin-left: 30px;
+color: black;
+}
+#content-inner legend
+{
+font-weight: normal;
+font-size: 1em;
+}

@@ -1,0 +1,22 @@
+<?php
+// $Id: translation_framework.install,v
+
+/**
+ * Implementation of hook_enable().
+ */
+function translation_framework_enable() {
+  drupal_set_message(t('Translation Framework successfully installed. Please review the <a href="@settings">configuration settings</a>.', array('@settings' => url('admin/translation_framework/settings'))));
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function translation_framework_install() {
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function translation_framework_uninstall() {
+}
+

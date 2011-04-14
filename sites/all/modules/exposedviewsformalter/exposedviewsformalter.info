@@ -1,0 +1,7 @@
+<?php
+ 
+; $Id$
+name = Exposed Views Form Alter
+description = Denna modul låter dig förändra hur exponerade filter visas.
+core = 6.x
+package = "Views Exposed Filter Alterations" 

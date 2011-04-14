@@ -1,0 +1,13 @@
+; $Id$
+name = "Administration Menu Dropdown"
+description = "Makes the Drupal Administration Menu hidden or shown by pressing key combo"
+dependencies[] = admin_menu
+package = "Administration"
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-04-06
+version = "6.x-2.x-dev"
+core = "6.x"
+project = "admin_menu_dropdown"
+datestamp = "1239019303"
+

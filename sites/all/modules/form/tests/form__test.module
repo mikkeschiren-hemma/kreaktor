@@ -1,0 +1,100 @@
+<?php
+// $Id: form__test.module,v 1.1 2009/12/08 04:23:28 davereid Exp $
+
+
+/**
+ * Implements hook_form_info().
+ */
+function form__test_form_info() {
+  $alterations['form__test_webmaster'] = array(
+    'title' => t('Contact webmaster'),
+    'description' => t('Sends the chosen field contents to a selected user.'),
+    'form callback' => 'form__test_form_configure_webmaster',
+    'process callback' => 'form__test_form_process_webmaster',
+  );
+  return $alterations;
+}
+
+function form__test_form_configure_webmaster(&$complete_form, $form_id, $context) {
+  // Fetch configuration.
+  // @todo Take over configuration storage for most/simple implementations.
+  $config = variable_get('form__test_webmaster_forms', array());
+
+  // I really wonder why Form API allows #element_validate, but not #element_submit... 15/11/2009 sun
+  $form['#submit'][] = 'form__test_form_configure_webmaster_submit';
+
+  $form['status'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Send an e-mail notification upon form submission'),
+    '#default_value' => isset($config[$form_id]),
+  );
+  if (!isset($config[$form_id])) {
+    $config[$form_id] = array();
+  }
+  $config[$form_id] += array(
+    'recipient' => '',
+    'message' => '',
+  );
+  $form['recipient'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Recipient'),
+    '#default_value' => $config[$form_id]['recipient'],
+    '#autocomplete_path' => 'user/autocomplete',
+    '#element_validate' => array('form_validate_username'),
+  );
+  $options = array();
+  foreach ($context['elements'] as $key => $element) {
+    if (isset($element['#title'])) {
+      $parents = implode('][', $element['#parents']);
+      $options[$parents] = $element['#title'];
+    }
+  }
+  $form['element'] = array(
+    '#type' => 'select',
+    '#title' => t('Field containing message'),
+    '#default_value' => $config[$form_id]['message'],
+    '#options' => $options,
+  );
+  $complete_form['#submit'][] = 'form__test_form_configure_webmaster_submit';
+
+  return $form;
+}
+
+function form__test_form_configure_webmaster_submit($form, &$form_state) {
+  // @todo Take over configuration storage for most/simple implementations.
+
+  $config = variable_get('form__test_webmaster_forms', array());
+  $form_id = $form_state['form']['form_id'];
+  if ($form_state['values']['form__test_webmaster']['status']) {
+    $elements = $form_state['form']['elements'];
+
+    $config[$form_id] = array(
+      'recipient' => $form_state['values']['form__test_webmaster']['recipient'],
+      'element' => explode('][', $form_state['values']['form__test_webmaster']['element']),
+    );
+  }
+  else {
+    unset($config[$form_id]);
+  }
+  variable_set('form__test_webmaster_forms', $config);
+}
+
+function form__test_form_process_webmaster(&$form, &$form_state, $form_id, $form_elements) {
+  $config = variable_get('form__test_webmaster_forms', array());
+  if (isset($config[$form_id])) {
+    $form['#submit'][] = 'form__test_form_webmaster_submit';
+  }
+}
+
+function form__test_form_webmaster_submit($form, &$form_state) {
+  $config = variable_get('form__test_webmaster_forms', array());
+  $form_id = $form['form_id']['#value'];
+
+  $recipient = $config[$form_id]['recipient'];
+  $message = form_get_value($form_state, $config[$form_id]['element']);
+
+  drupal_set_message('<pre>' . var_export(array(
+    'recipient' => $recipient,
+    'message' => $message,
+  ), TRUE) . '</pre>');
+}

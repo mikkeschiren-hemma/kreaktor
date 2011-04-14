@@ -1,0 +1,58 @@
+<?php
+
+/**
+ * Update feeds_excel config to new options and token replacement.
+ */
+function feeds_excel_update_6101() {
+
+  $res = db_query("SELECT * FROM {feeds_importer} WHERE config LIKE '%%%s%%'", 'ExcelParser');
+  while ($obj = db_fetch_object($res)) {
+    $config = unserialize($obj->config);
+    if ($config['parser']['plugin_key'] == 'ExcelParser') {
+      $offset = $config['parser']['config']['offset'];
+      if ($offset) {
+        $config['parser']['config']['fixed'] = "1:$offset";
+        $config['parser']['config']['iterative'] = ($offset + 1) .":10000";
+      }
+      else {
+        $config['parser']['config']['iterative'] = "1:10000";
+      }
+      if (is_array($config['processor']['config']['mappings'])) {
+        foreach ($config['processor']['config']['mappings'] as $i => $mapp) {
+          $replace = array(
+            'file:path' => '[excel-filepath]',
+            'parent:uid' => '[parent:author-uid]',
+            'user:uid' => '[user-id]',
+            'sheet:id' => '[sheet-id]',
+            'sheet:name' => '[sheet-name]',
+            'guid' => 'excel:[excel-filepath]-sheet:[sheet-id]-row:[row]',
+          );
+          $preg_replace = array(
+            '@cell-[0-9]+-[0-9]+@is' => '[sheet-\0]',
+            '@column-[0-9]+@is' => '[\0]',
+          );
+
+          $source = $mapp['source'];
+          $source = preg_replace(array_keys($preg_replace), array_values($preg_replace), $source);
+          $source = str_replace(array_keys($replace), array_values($replace), $source);
+          $config['processor']['config']['mappings'][$i]['source'] = $source;
+        }
+      }
+      $obj->config = $config;
+      drupal_write_record('feeds_importer', $obj, array('id'));
+      $ret[] = array(
+        'success' => TRUE,
+        'query' => t('Updated settings for importer %name to support new options.', array('%name' => $config['name'])),
+      );
+    }
+  }
+
+  if (!module_exists('token')) {
+    module_enable(array('token'));
+    $ret[] = array(
+      'success' => TRUE,
+      'query' => 'Enabled Token.module.',
+    );
+  }
+  return $ret;
+}

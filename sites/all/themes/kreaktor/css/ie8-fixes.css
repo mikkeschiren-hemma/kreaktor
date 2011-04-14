@@ -1,0 +1,44 @@
+/* $Id: ie8-fixes.css,v 1.1.2.3 2010/01/11 00:09:05 sociotech Exp $ */
+
+/* IE8 fixes
+-------------------------------------------------------------- */
+/* Ubercart */
+/* improve appearance of fieldset legends */
+#uc-cart-checkout-form fieldset legend {
+  margin-bottom: 10px;
+  margin-top: -35px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+
+#edit-submit-filter-keys1
+{
+z-index: 2000;
+position: relative;
+top: -21px;
+left: 200px;
+padding: 4px 12px 4px 8px;
+}
+
+
+.front #edit-submit-filter-keys1
+{
+top: -20px;
+left: 200px;
+}
+
+
+
+
+
+#edit-fritext
+{
+padding: 2px 200px 2px 1px;
+}
+.kalendariumkol
+{
+top: -6px;
+left: 640px;
+position: absolute;
+}

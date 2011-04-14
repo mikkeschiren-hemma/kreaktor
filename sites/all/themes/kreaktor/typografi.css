@@ -1,0 +1,464 @@
+/*
+typografi för Kreaktor
+*/
+.content legend
+{
+color: black;
+font-weight: normal;
+margin-left: -3px;
+}
+.content legend
+{
+color: black;
+font-weight: normal;
+margin-left: -3px;
+}
+.kort h1, h2, h3, h4, h5, h6
+{
+color: black;
+}
+.kort h1
+{
+margin-top: 10px;
+}
+.kort
+{
+line-height: 1.7em;
+}
+
+.kort li, .kort p
+{
+margin-bottom: 1em;
+
+}
+
+.kort fieldset
+{
+padding-top: 10px;
+padding-left: 30px;
+font-size: 1.2em;
+margin-left: 32px;
+margin-right: 32px;
+}
+
+
+
+
+.sokrubrik
+
+{
+height: 1.4em;
+padding-bottom: 1px;
+border-bottom: 1px solid #c8c8c8;
+}
+
+.sokrubriken
+{
+background-color: white;
+padding-right: 0.5em;
+}
+
+.soknodtyp
+{
+background-color: white;
+padding-left: 0.5em;
+}
+fieldset h1, fieldset h2, fieldset h3, fieldset h4, fieldset h5, fieldset h6, fieldset ol, fieldset ul
+{
+width: 70%;
+}
+
+fieldset p
+{
+width: 70%;
+font-size: 1.1em;
+}
+
+
+.sokrutan a
+{
+color: black !important;
+}
+
+.sokrutan legend a
+{
+font-weight: normal;
+}
+.page-test-sok2 h1.title
+{
+display: none;
+}
+
+p.search-snippet
+{
+width: 520px;
+}
+
+
+.content h1
+{
+font-size: 2.0em;
+line-height: 1.25em;
+margin-left: 2px;
+color:#000;
+}
+
+.content .node p
+{
+font-size: 1.2em;
+line-height: 1.8em;
+color: #403f3f;
+}
+
+#kalendarielistning small
+{
+font-style: italic;
+font-size: 0.9em;
+}
+
+#kalendarielistning p
+{
+margin-bottom: 10px;
+line-height: 1.2em;
+}
+
+
+
+
+
+
+.sokrutan fieldset
+{
+padding: 0;
+margin-bottom: 3px;
+margin-top: -10px;
+margin-left: 10px;
+}
+.sokrutan legend
+{
+font-weight: 100;
+}
+
+.sokrutan
+{
+padding: 8px;
+border: 1px solid #bfbdb9;
+background-color:#f0efe9;
+margin-bottom: 30px;
+margin-left: 160px;
+}
+.sokgra
+{
+color: #6b6b6b;
+}
+body.front .content h3
+{
+margin: 0.9em 0 0.3em 0;
+
+}
+
+#textklicksok div.grupp1
+{
+margin-left: 15px;
+font-size: 1.1em;
+}
+
+#textklicksok h4
+{
+width: 100%;
+color: #2c5bb8;
+font-weight: bold;
+text-transform: uppercase;
+text-decoration: underline;
+}
+
+body.front .content p
+{
+margin: 0.2em;
+}
+
+.sokrubriken
+{
+font-size: 1.2em;
+font-weight: bold;
+float:left;
+color: #b51735;
+}
+.sokrubriken a
+{
+color: #b51735;
+}
+
+p.hela
+{
+margin-bottom: 20px;
+}
+.fottext
+{
+color: white;
+}
+#content-inner h1.title
+{
+margin-left: 30px;
+color: black;
+font-size: 2.0em;
+}
+#content-inner legend
+{
+font-weight: normal;
+font-size: 1em;
+}
+
+
+/*
+tillagt
+*/
+
+
+
+.menyfram h3, .pane-content .view-header h3 {
+	text-transform:uppercase;
+	color:#bf5f14;
+	font-size: 1.25em;
+	line-height:1.1em;
+	}
+	
+.menyfram small {
+	color:#525252;
+	}
+	
+.menyfram a {
+	color:#000000 !important;
+	font-size: 1.1em;
+	}
+
+.fieldset-wrapper h3 {
+font-size:1.3em;
+}
+	
+.field-content a {
+color:#b51735;
+line-height: 2em;
+}
+		
+.pane-content div.views-field-title
+{
+margin-bottom: 10px;
+
+}
+.pane-content div.views-field-title a
+{
+line-height: 1.2em;
+}
+		
+.kort fieldset.collapsible legend {
+margin-left:-37px;
+padding-bottom: 5px;
+font-size: 0.95em !important;
+}
+.content a
+{
+color: #B51735;
+}
+.expandera
+
+{
+text-align: right;
+text-transform: uppercase;
+color: black;
+}
+
+
+.kort fieldset p
+{
+font-size: 1em !important;
+}
+.soksnipp p
+
+{
+padding-right: 80px;
+}
+
+.kort li
+
+{
+margin-left: -13px;
+}
+
+
+legend.collapse-processed, legend.collapse-processed a:link, legend.collapse-processed a:visited
+{
+font-family: 'Trebuchet MS', Helvetica, Verdana, sans-serif; 
+
+}
+
+
+html.js .kort fieldset.collapsed
+{
+margin-top: 0;
+padding-top: 0;
+height: 2em;
+}
+
+html.js fieldset.collapsible
+{
+margin-bottom: 0.5em;
+margin-top: 0;
+padding-top: 0;
+padding-bottom: 2em;
+}
+html.js fieldset.collapsed
+{
+padding-bottom: 0;
+}
+
+html.js fieldset.collapsible p
+{
+margin-bottom: 0;
+}
+html.js fieldset legend a
+{
+margin: 0;
+padding: 0;
+}
+
+#content-inner #textklicksok2 legend
+{
+font-size: 1.1em;
+}
+
+
+#content-inner #textklicksok2 legend a
+{
+
+padding-bottom: 0;
+}
+
+#textklicksok fieldset.collapsed
+{
+margin-bottom:0;
+margin-top:-60px;
+padding: 0;
+}
+
+#textklicksok fieldset li a
+{
+line-height: 1em;
+}
+
+#textklicksok fieldset
+{
+width: 515px;
+}
+.antalbloggkommentarer
+{
+text-align: center;
+display: inline;
+padding: 5px;
+color: #fff;
+background-color: #70695f;
+font-weight: bold;
+}
+
+.kommenterainlagget
+{
+margin-left: 5px;
+padding-left: 8px;
+text-align: center;
+display: inline;
+padding: 5px;
+color: #fff;
+background-color: #70695f;
+font-weight: bold;
+}
+
+.kommenterainlagget a
+{
+color: #fff;
+}
+.kalendariumkol a
+{
+color: #000;	
+}
+.skapanykalendariepost
+{
+margin-top: 40px;
+}
+.bifogadefiler
+{
+margin-top: 2em;
+}
+.lankar
+
+{
+margin-bottom: 2em;
+
+}
+.bifogadefiler strong, .lankar strong
+{
+font-size: 1.2em;
+}
+.kalendariepost .content h1
+{
+margin-left: 0;
+}
+.kalendariepost .content p
+{
+margin-left: 0;
+}
+.kalendariepost .brodtext
+{
+padding-left: 0;
+margin-left:0;
+}
+@-moz-document url(http://kreaktor.gimmikk.net/),
+               domain(kreaktor.gimmikk.net)
+{
+#textklicksok2
+{
+top: -50px;
+position: relative;
+}
+
+
+.front #textklicksok2
+{
+position: relative;
+top: -70px;
+margin-bottom: -80px;
+}
+
+}
+@-moz-document url(http://kreaktor.se),
+               domain(kreaktor.se)
+{
+#textklicksok2
+{
+top: -50px;
+position: relative;
+}
+.front #textklicksok2
+{
+position: relative;
+top: -70px;
+margin-bottom: -80px;
+}
+
+}
+
+#geografi fieldset 
+{
+
+}
+
+#gmi-gmaps-views-map--oka-attachment-1
+{
+margin-top: 30px;
+margin-left: 110px;
+}
+
+
+.gmaps-info-window-content
+{
+width: 400px;
+}

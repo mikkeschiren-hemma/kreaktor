@@ -1,0 +1,25 @@
+// $Id: CHANGELOG.txt,v 1.1.2.6 2009/07/21 15:48:18 jrockowitz Exp $
+
+Fieldset helper 6.x-1.0, xxxx-xx-xx
+-----------------------------------
+2009-21-11 - by jrockowitz: Reviewed and cleanup API documentation.
+xxxx-xx-xx - by jrockowitz: Fixed error in fieldset_helper.test with getInfo missing 'public static' scope.
+xxxx-xx-xx - by jrockowitz: Added SimpleTest and fixed and/or cleaned-up discovered issues.
+- Added optional DOM id param for theme_fieldset_helper_toggle_all($selector, $id);
+- Added _fieldset_helper_format_id($text) so that form_alter and theme_fieldset
+  share the same format.
+- Added fieldset_helper_state_manager_clear_lookup_ids() to purge existing ids;
+- Added 'Clear lookup id' to admin settings form.
+- Added $clear param to fieldset_helper_state_manager_get_cookie_states() for testing purposes.
+xxxx-xx-xx - by jrockowitz: Fix: 'Warning: Call-time pass-by-reference has been deprecated
+  in fieldset_helper.module on line 155
+xxxx-xx-xx - by jrockowitz: Minor pre-port code tweaks for Drupal 7 and fix form alter fieldset ids to be valid DOM #id.
+- Fix '[error] PHP Notice: Undefined index:' by checking for array's index of
+  property existance using isset(array['item']).
+- JavaScript should be compatible with other libraries than jQuery.
+  http://drupal.org/node/224333#javascript_compatibility
+xxxx-xx-xx - #425248 by HoKe: Un-/collapse by levels for moduleinfo.module
+-  Updated expand and collapse all on modules page to only open first level for fieldsets.
+-  Tweaked Drupal.FieldsetHelper.toggleFieldsets to allow for a completely custom jQuery selector.
+xxxx-xx-xx - by jrockowitz: Changed fieldset_helper.info file's package from 'Custom' to 'Other'.
+xxxx-xx-xx - by jrockowitz: Initial commit of fieldset_helper module.

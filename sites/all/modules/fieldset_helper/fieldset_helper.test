@@ -1,0 +1,192 @@
+<?php
+// $Id: fieldset_helper.test,v 1.1.2.2 2009/04/24 14:29:13 jrockowitz Exp $
+
+/**
+ * @file
+ * Test for Fieldset helper module.
+ */
+require_once 'fieldset_helper.admin.inc';
+
+class FieldsetHelperTestCase extends DrupalWebTestCase {
+
+  /**
+   * Implementation of getInfo().
+   */
+  public static function getInfo() {
+    return array(
+      'name' => t('Fieldset helper'),
+      'description' => t('Test fieldset helper module.'),
+      'group' => t('Fieldset helper'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    // Enable modules
+    parent::setUp('fieldset_helper');
+
+    // Flush form clean id
+    form_clean_id(NULL, TRUE);
+
+    // Login
+    $user = $this->drupalCreateUser( array('access administration pages', 'administer site configuration', 'administer fieldset state', 'save fieldset state') );
+    $this->drupalLogin($user);
+  }
+
+  /**
+   * Test fieldset helper alter form implementation.
+   */
+  function testFieldsetHelperAlterForm() {
+    // Test $user is logged with the correct permissions.
+    $this->drupalGet('admin/settings/fieldset_helper/test');
+    $this->assertResponse(200);
+
+    // Test generated fieldset ids
+    $this->assertRaw('id="fieldset-collapsible"', t('Find collapsible fieldset by id.'));
+    $this->assertRaw('id="fieldset-nested"', t('Find collapsible fieldset by id.'));
+    $this->assertRaw('id="fieldset-nested-collapsed"', t('Find collapsible fieldset by id.'));
+
+    // Test auto exclude list by loading a few page with forms that do not contain fieldsets.
+    $this->drupalGet('admin/build/modules');
+    $this->drupalGet('admin/settings/site-maintenance');
+    $this->drupalGet('admin/user/settings');
+
+    $auto_exclude = variable_get('fieldset_helper_auto_exclude', array());
+    $this->assertTrue( isset($auto_exclude['system-modules']), t('Check auto exclude list.'));
+    $this->assertTrue( isset($auto_exclude['system-site-maintenance-settings']), t('Check auto exclude list.'));
+    $this->assertFalse( isset($auto_exclude['user-admin-settings']) , t('Check auto exclude list.'));
+  }
+
+  /**
+   * Test adding fieldset id's to $form array.
+   */
+  function testFieldsetHelperSetCollapsibleFieldsetIds() {
+    // Test form with collapsible fieldset.
+    $form_id = 'mock-form-with-collapsible-fieldsets';
+    $form['parent'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Parent fieldset'),
+    );
+    $form['parent']['collapsible'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Collapsible fieldset'),
+      '#collapsible' => TRUE,
+    );
+    $form['parent']['collapsed'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Collapsed fieldset'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['parent']['1 with a  B@D nam3'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Collapsible fieldset'),
+      '#collapsible' => TRUE,
+    );
+
+    $has_collapsible_fieldset = _fieldset_helper_set_collapsible_fieldset_ids($form, $form_id);
+    $this->assertTrue( $has_collapsible_fieldset, t('Form has collapsible fieldsets'));
+    $this->assertTrue( $form['parent']['collapsible']['#attributes']['id'] == 'fieldset-parent-collapsible', t('Fieldset has id.'));
+    $this->assertTrue( $form['parent']['1 with a  B@D nam3']['#attributes']['id'] == 'fieldset-parent-1-with-a-b-d-nam3', t('Fieldset has id.'));
+    $this->assertFalse( isset($form['parent']['#attributes']), t('Fieldset has does not id.'));
+
+    // Test form with out collapsible fieldset.
+    $form_id = 'mock-form-with-out-collapsible-fieldsets';
+    $form['parent'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Plain fieldset'),
+    );
+    $form['parent']['text'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Text field'),
+    );
+
+    $has_collapsible_fieldset = _fieldset_helper_set_collapsible_fieldset_ids($form, $form_id);
+    $this->assertFalse( $has_collapsible_fieldset, t('Form does not have collapsible fieldsets'));
+  }
+
+  /**
+   * Test toggle all added to the admin modules pages (admin/build/modules).
+   */
+  function testFieldsetHelperAdminModulesSettingsToggleAll() {
+    $this->drupalGet('admin/build/modules');
+    $this->assertRaw('class="fieldset-helper-toggle-all"', t('Find toggle all DOM class.'));
+    $this->assertRaw('id="system-modules-toggle-all"', t('Find toggle all DOM id.'));
+  }
+
+  /**
+   * Test alter fieldset element which can also create fieldset ids for modules like CCK.
+   */
+  function testFieldsetHelperAlterThemeFieldset() {
+    // Test generate fieldset id from #title
+    $element = array(
+      '#type' => 'fieldset',
+      '#title' => t('Collapsible fieldset'),
+      '#collapsible' => TRUE,
+    );
+    $element = fieldset_helper_alter_theme_fieldset($element);
+    $this->assertTrue( $element['#attributes']['id'] == 'fieldset-collapsible-fieldset', t('Fieldset has id.'));
+
+    // Test not generating fieldset id if one already exists/
+    $element = array(
+      '#type' => 'fieldset',
+      '#attributes' => array('id' => 'my-custom-ID'),
+      '#collapsible' => TRUE,
+    );
+    $element = fieldset_helper_alter_theme_fieldset($element);
+    $this->assertTrue( $element['#attributes']['id'] == 'my-custom-ID', t('Fieldset id is not over-written.'));
+  }
+
+  /**
+   * Resets the Fieldset helper state manager cookies value for every loaded fieldset.
+   */
+  function setFieldsetHelperStateManagerCookie($state) {
+    // Get lookup id for cookie generation.
+    $lookup_id_table = fieldset_helper_state_manager_get_lookup_id();
+
+    // Set the cookie state for all fieldsets for the current (test) page.
+    foreach($lookup_id_table as $key => $value) {
+      $states[] = $value .'.'. $state;
+    }
+    $_COOKIE['fieldset_helper_state_manager'] = implode('_', $states);
+
+    // Flush cached cookie states
+    fieldset_helper_state_manager_get_cookie_states(TRUE);
+  }
+
+  /**
+   * Test default fieldset state for the test form loaded in SimpleTest.
+   */
+  function testFieldsetHelperStateManagerDefault() {
+    // Not sure is this is considerd okay but it is easier then doing a get with a custom cookie.
+    $this->content = drupal_get_form('fieldset_helper_test_form');
+
+    $this->assertRaw('<fieldset id="fieldset-collapsible" class=" collapsible">', t('Check default fieldset state.'));
+    $this->assertRaw('<fieldset id="fieldset-collapsed" class=" collapsible collapsed">', t('Check default fieldset state.'));
+  }
+
+  /**
+   * Test that all fieldsets are expanded.
+   */
+  function testFieldsetHelperStateManagerExpanded() {
+    $this->setFieldsetHelperStateManagerCookie('0');
+    $this->content = drupal_get_form('fieldset_helper_test_form');
+
+    $this->assertRaw('<fieldset id="fieldset-collapsible" class=" collapsible">', t('Check expanded fieldset state.'));
+    $this->assertRaw('<fieldset id="fieldset-collapsed" class=" collapsible">', t('Check expanded fieldset state.'));
+  }
+
+  /**
+   * Test that all fieldsets are collapsed.
+   */
+  function testFieldsetHelperStateManagerCollapsed() {
+    $this->setFieldsetHelperStateManagerCookie('1');
+    $this->content = drupal_get_form('fieldset_helper_test_form');
+
+    $this->assertRaw('<fieldset id="fieldset-collapsible" class=" collapsible collapsed">', t('Check collapsed fieldset state.'));
+    $this->assertRaw('<fieldset id="fieldset-collapsed" class=" collapsible collapsed">', t('Check collapsed fieldset state.'));
+  }
+
+}

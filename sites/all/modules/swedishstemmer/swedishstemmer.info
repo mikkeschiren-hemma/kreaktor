@@ -1,0 +1,10 @@
+; $Id: swedishstemmer.info,v 1.2 2008/11/25 06:03:18 frjo Exp $
+name = Swedish Stemmer
+description = "Improve Swedish language searching by simplifying related words to their root (verbs, plurals, ...)."
+core = 6.x
+; Information added by drupal.org packaging script on 2010-05-22
+version = "6.x-1.1"
+core = "6.x"
+project = "swedishstemmer"
+datestamp = "1274551812"
+

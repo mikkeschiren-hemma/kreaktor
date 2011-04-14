@@ -1,0 +1,8 @@
+/* $Id: admin_menu_dropdown_show.css,v 1.3 2008/02/25 15:40:50 shawnconn Exp $ */
+
+/**
+* admin_menu_dropdown_show.css: Shows the drupal administration menu. Will 
+* hide if key combo is pressed
+*/
+#admin-menu { position: fixed;}
+body { margin-top: 0px !important; }

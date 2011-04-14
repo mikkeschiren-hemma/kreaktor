@@ -1,0 +1,69 @@
+<?php
+// $Id: fieldset_helper.install,v 1.1 2009/04/02 17:20:43 jrockowitz Exp $
+
+/**
+ * @file
+ * Installation information for the 'Fieldset helper' module.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function fieldset_helper_install() {
+  // Set variables
+  variable_set('fieldset_helper_auto_exclude', array());
+
+  // Set the weight to 1000. This module needs to be called after all other modules
+  // have executed their hook_form_alter() functions.
+  db_query("UPDATE {system} SET weight = 1000 WHERE name = 'fieldset_helper'");
+
+  drupal_install_schema('fieldset_helper');
+}
+
+ /**
+ * Implementation of hook_uninstall().
+ */
+function fieldset_helper_uninstall() {
+  // Delete all the fieldset_helper variables and then clear the variable cache
+  db_query("DELETE FROM {variable} WHERE name LIKE 'fieldset_helper_%'");
+  cache_clear_all('variables', 'cache');
+
+  drupal_uninstall_schema('fieldset_helper');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function fieldset_helper_schema() {
+  // Learn more at http://api.drupal.org/api/function/hook_schema
+  return array(
+    'fieldset_helper_state_manager' => array(
+      'description' => t("Table to save a short numeric lookup id for a DOM element"),
+      'fields' => array(
+        'id' => array(
+          'description' => 'The unique id',
+          'type' => 'serial', // auto increment
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ),
+        'path' => array(
+          'description' => "A drupal path",
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+        ),
+        'element_id' => array(
+          'description' => "The unique DOM element id.",
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+        ),
+      ),
+      'primary key' => array('id'),
+      'indexes' => array(
+        'path' => array('path'),
+      )
+    ),
+  );
+}
+

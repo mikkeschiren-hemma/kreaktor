@@ -1,0 +1,12 @@
+; $Id: form.info,v 1.2 2009/12/08 04:23:28 davereid Exp $
+name = Form
+description = Allows to manage forms.
+package = Development
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-12-14
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "form"
+datestamp = "1260749169"
+

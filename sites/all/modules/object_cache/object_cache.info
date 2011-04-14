@@ -1,0 +1,12 @@
+; $Id: object_cache.info,v 1.1 2010/12/16 23:06:30 swentel Exp $
+name = "Object cache"
+description = "Caches full objects into the database for faster retrieval."
+core = "6.x"
+package = "Caching"
+
+; Information added by drupal.org packaging script on January 1, 1970 - 00:00
+version = "6.x-1.1"
+core = "6.x"
+project = "object_cache"
+datestamp = "1296041245"
+

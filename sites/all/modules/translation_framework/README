@@ -1,0 +1,55 @@
+/* $Id: README,v 1.1.2.7 2009/04/23 22:18:03 darrenferguson Exp $ */
+
+This module provides a translation framework utilizing contrib modules apis. The framework looks to provide a
+generic api that can be called from any module and the api will handle all pertinent requests and the return
+data for each function call will be the same no matter which underlying contrib module is being utilized.
+
+INSTALLATION
+------------
+
+Install and enable the translation framework Drupal module as you would any Drupal module.
+
+Configure the module at Administer > Translation Framework
+
+CONFIGURATION OPTIONS
+---------------------
+The only configuration option available is to choose the translation api that you wish to utilize.
+Once it is chosen you can then start using the module.
+
+HOOKS PROVIDED
+-----------------
+The translation framework provides the hook_translation_realtime($op = 'info')
+
+This hook currently only supports the info operation and is used to gather information
+about the underlying contribued API module.
+
+Currently supported information from the module is listed below:
+
+name: the name that will be displayed when choosing the module in translation framework settings
+
+preprocess: function to call for any pre-processing of the request
+
+translate: function to call in order to translate the text
+
+postprocess: function to call after translation has occurred
+
+languages: function to provide an array of the languages supported format array('en' => 'English', 'fr' => 'French')
+
+description: a description of the translation api
+
+API FUNCTIONS
+-------------
+translation_framework_translate_send($data, $src, $dst)
+
+Function takes in the $data which is to be translated and builds the translation object. $src is the language that
+$data is currently in and $dst is the language that you want $data to be translated into. Will return your translated
+text or the original text back on error.
+
+translation_framework_languages()
+This function is called to get the languages that the translation api being utilized supports. They will be sent back
+in the format array('en' => 'English', 'fr' => 'French')
+
+CREDITS
+-------
+Developed and maintained by Darren Ferguson <darren.ferguson@openband.net>
+Sponsored by OpenBand <http://tech.openband.net/>

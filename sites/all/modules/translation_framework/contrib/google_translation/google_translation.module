@@ -1,0 +1,279 @@
+<?php
+
+/**
+ * @file
+ * GOOGLE Translation plugin module
+ */
+
+define('GOOGLE_TRANSLATION_PATH',        drupal_get_path('module', 'google_translation'));
+
+// variables required by the module in order to function correctly
+define('GOOGLE_TRANSLATION_URL',         variable_get('google_translation_url', 'http://translate.google.com/translate_t?langpair='));
+define('GOOGLE_TRANSLATION_HTTP_METHOD', variable_get('google_translation_http_method', 'GET'));
+define('GOOGLE_TRANSLATION_HTTP_RETRY',  variable_get('google_translation_http_retry', 3));
+
+/**
+ * Implementation of hook_help()
+ */
+function google_translation_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case 'admin/modules#name':
+      $output = t('google_translation');
+      break;
+    case 'admin/modules#description':
+      $output = t('Provides an API for Google Translation');
+      break;
+    case 'admin/help#google_translation':
+      $output = '<p>'. t('The google_translation module provides an interface to the GOOGLE translation software') .'</p>';
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_menu()
+ */
+function google_translation_menu() {
+  $items['admin/translation_framework/google_translation'] = array(
+    'title'            => 'Google API',
+    'description'      => 'Configure the google_translation module',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('google_translation_admin_settings'),
+    'access arguments' => array('administer translation framework'),
+    'file' => 'google_translation.admin.inc',
+  );
+  $items['admin/translation_framework/google_translation/settings'] = array(
+    'title' => 'Settings',
+    'description' => 'Configure the google_translation module',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('google_translation_admin_settings'),
+    'access arguments' => array('administer translation framework'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'file' => 'google_translation.admin.inc',
+    'weight' => -9,
+  );
+  $items['admin/translation_framework/google_translation/mappings'] = array(
+    'title' => 'Mappings',
+    'description' => 'Map Drupal specific languages to languages supported in the Google Translation',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('google_translation_language_mappings_form'),
+    'access arguments' => array('administer translation framework'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'google_translation.admin.inc',
+    'weight' => 0,
+  );
+  $items['admin/translation_framework/google_translation/mappings/delete'] = array(
+    'title' => 'Delete Mapping',
+    'description' => 'Remove an existing language mapping from the system',
+    'page callback' => 'google_translation_language_mappings_delete',
+    'access arguments' => array('administer translation framework'),
+    'type' => MENU_SUGGESTED_ITEM,
+    'file' => 'google_translation.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_theme()
+ */
+function google_translation_theme() {
+  return array(
+    'google_translation_language_mappings_form' => array(
+      'file' => 'google_translation.theme.inc',
+      'arguments' => array('form' => NULL),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_translation_realtime()
+ *
+ * @param $op
+ *      The operation that is being requested from the system
+ */
+function google_translation_translation_realtime($op = 'info') {
+  switch ($op) {
+    case 'info':
+      $info['google_translation'] = array(
+        'name' => t('GOOGLE'),
+        'preprocess'  => 'google_translation_preprocess',
+        'translate'   => 'google_translation_translate',
+        'postprocess' => 'google_translation_postprocess',
+        'languages'   => 'google_translation_languages',
+        'description' => t('Utilize GOOGLE Translation software'),
+      );
+      return $info;
+  }
+}
+
+/**
+ * Function for doing any necessary rendering of the content before we send it to be translated
+ *
+ * @param $translate
+ *      The translation object with all pertinent data regarding the translation
+ */
+function google_translation_preprocess($translate) {
+  return $translate;
+}
+
+/**
+ *
+ */
+function google_translation_postprocess($translate) {
+  return $translate;
+}
+
+/**
+ * Function will actually translate the data and set the translation field in the object
+ *
+ * @param $translate
+ *      The object that holds all pertinent information regarding data translation
+ *
+ * @return $translate
+ *      The translation object that will have the translate portion set
+ */
+function google_translation_translate($translate) {
+  if (is_object($translate)) {
+    if (isset($translate->data) && !is_null($translate->data) && drupal_strlen($translate->data) > 0) {
+      // At this point do checking for any mapped fields that we need too create
+      $mappings = variable_get('google_translation_language_mappings', array());
+      $google_languages = google_translation_languages();
+      // Check the source language to make sure it is actually one we support
+      if (!isset($google_languages[$translate->src])) {
+        if (isset($mappings[$translate->src])) {
+          $translate->src = $mappings[$translate->src];
+        }
+        else {
+          $translate->error_code = 700;
+          $translate->error_msg = t('Invalid source language when trying to create translation from');
+          $translate->translation = $translate->data;
+          watchdog('google_translation', t('Source translation language: %lang was invalid'), array('%lang' => $translate->src), WATCHDOG_ERROR);
+          return $translate;
+        }
+      }
+      // Check the destination language to make sure it is actually one we support
+      if (!isset($google_languages[$translate->dst])) {
+        if (isset($mappings[$translate->dst])) {
+          $translate->dst = $mappings[$translate->dst];
+        }
+        else {
+          $translate->error_code = 701;
+          $translate->error_msg = t('Invalid destination language when trying to create translation');
+          $translate->translation = $translate->data;
+          watchdog('google_translation', t('Destination translation language: %lang was invalid'), array('%lang' => $translate->dst), WATCHDOG_ERROR);
+          return $translate;
+        }
+      }
+      // setting the language pairs that google is looking for
+      $maxsize = variable_get('google_translation_max_string_size', 500);
+      if (!is_numeric($maxsize)) {
+        $maxsize = 500;
+      }
+      if (strlen($translate->data) > $maxsize) {
+        $text = _google_translation_split_string($translate);
+        if (!is_null($text)) {
+          $translate->translation = $text;
+        }
+        else {
+          $translate->translation = $translate->data;
+          $translate->error_code = 801;
+          $translate->error_msg = t('Google Translation service could not translate the information that was received');
+        }
+      }
+      else {
+        $lp = $translate->src .'|'. $translate->dst;
+        $url = GOOGLE_TRANSLATION_URL . $lp .'&text='. urlencode($translate->data);
+        $result = drupal_http_request($url, array(), GOOGLE_TRANSLATION_HTTP_METHOD, NULL, GOOGLE_TRANSLATION_HTTP_RETRY);
+        if ($result->code == 200) {
+          preg_match('/<div id=result_box dir="ltr">(.*?)<\/div>/', $result->data, $out);
+          $translate->translation = utf8_encode($out[1]);
+        }
+        else {
+          $translate->translation = $translate->data;
+          $translate->error_code = $result->code;
+          $translate->error_msg = $result->error;
+          watchdog('google_translation', t('Google Translation Failed: Code: !code, Error: !error'), array('!code' => $result->code, '!error' => $result->error), WATCHDOG_ERROR);
+        }
+      }
+    }
+  }
+  return $translate;
+}
+
+/**
+ * Function splits the string into more managable chunks so google will not complain
+ */
+function _google_translation_split_string($translate) {
+  $translated_string = '';
+  $maxsize = variable_get('google_translation_max_string_size', 500);
+  if (!is_numeric($maxsize)) {
+    $maxsize = 500;
+  }
+  $str = wordwrap($translate->data, $maxsize, "<BREAKONME>");
+  $pieces = explode("<BREAKONME>", $str);
+  $lp = $translate->src .'|'. $translate->dst;
+  $url = GOOGLE_TRANSLATION_URL . $lp .'&text=';
+  if (is_array($pieces) && !empty($pieces)) {
+    foreach ($pieces as $piece) {
+      $result = drupal_http_request($url . urlencode($piece), array(), GOOGLE_TRANSLATION_HTTP_METHOD, NULL, GOOGLE_TRANSLATION_HTTP_RETRY);
+      if ($result->code == 200) {
+        preg_match('/<div id=result_box dir="ltr">(.*?)<\/div>/', $result->data, $out);
+        $translated_string .= utf8_encode($out[1]);
+      }
+      else {
+        $translate->translation = $translate->data;
+        $translate->error_code = $result->code;
+        $translate->error_msg = $result->error;
+        watchdog('google_translation', t('Google Translation Failed: Code: !code, Error: !error'), array('!code' => $result->code, '!error' => $result->error), WATCHDOG_ERROR);
+        $translated_string = '';
+        break;
+      }
+    }
+  }
+  if (drupal_strlen($translated_string)) {
+    return $translated_string;
+  }
+  return NULL;
+}
+
+/**
+ * Function returns an array of the translatable languages that the Google interface supports
+ */
+function google_translation_languages($include = FALSE) {
+  $google_translations = array(
+    'ar' => t('Arabic'),
+    'bg' => t('Bulgarian'),
+    'zh-CN' => t('Chinese'),
+    'hr' => t('Croatian'),
+    'cs' => t('Czech'),
+    'da' => t('Danish'),
+    'nl' => t('Dutch'),
+    'en' => t('English'),
+    'fi' => t('Finnish'),
+    'fr' => t('French'),
+    'de' => t('German'),
+    'el' => t('Greek'),
+    'hi' => t('Hindi'),
+    'it' => t('Italian'),
+    'ja' => t('Japanese'),
+    'ko' => t('Korean'),
+    'no' => t('Norwegian'),
+    'pl' => t('Polish'),
+    'pt' => t('Portuguese'),
+    'ro' => t('Romanian'),
+    'ru' => t('Russian'),
+    'es' => t('Spanish'),
+    'sv' => t('Swedish'),
+  );
+  if ($include === TRUE) {
+    $mappings = variable_get('google_translation_language_mappings', array());
+    $locales = locale_language_list('name');
+    // We should now go through all of our mappings and add what we require so people can utilize the mapped fields
+    foreach ($mappings as $k => $v) {
+      $google_translations[$k] = $locales[$k];
+    }
+  }
+  return $google_translations;
+}

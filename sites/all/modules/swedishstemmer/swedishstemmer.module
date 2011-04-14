@@ -1,0 +1,90 @@
+<?php
+// $Id: swedishstemmer.module,v 1.2.2.1 2010/03/23 06:53:40 frjo Exp $
+
+/**
+ * @file
+ * "Improve Swedish language searching by simplifying related words to their root (verbs, plurals, ...).
+ * Algorithm based on http://snowball.tartarus.org/algorithms/swedish/stemmer.html.
+ */
+
+/**
+ * Implementation of hook_search_preprocess.
+ */
+function swedishstemmer_search_preprocess($text) {
+  // Split words from noise and remove apostrophes
+  $words = preg_split('/([^a-zA-ZéåäöÅÄÖ\']+)/u', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+  // Process each word
+  $odd = true;
+  foreach ($words as $k => $word) {
+    if ($odd) {
+      $words[$k] = swedishstemmer_stem($word);
+    }
+    $odd = !$odd;
+  }
+
+  // Put it all back together, only return a string if it's more than the
+  // minimum word size as set here: admin/settings/search, otherwise we might
+  // not get results on short words that have been stemmed to be shorter than
+  // the required length.
+  if (drupal_strlen($sentence = implode('', $words)) >= variable_get('minimum_word_size', 3)) {
+    return $sentence;
+  }
+  return $text;
+}
+
+/**
+ * Stem a Swedish word.
+ */
+function swedishstemmer_stem($word) {
+  // Lowercase
+  $word = drupal_strtolower($word);
+
+  /* R1 is the region after the first non-vowel following a vowel, or is the
+     null region at the end of the word if there is no such non-vowel. */
+  if (preg_match('/[aeiouyäåö][^aeiouyäåö]/u', $word, $matches, PREG_OFFSET_CAPTURE)) {
+    $r1 = $matches[0][1] + 2;
+  }
+
+  // Steps 1-3: suffix removal
+  $word = swedishstemmer_step1($word, $r1);
+  $word = swedishstemmer_step2($word, $r1);
+  $word = swedishstemmer_step3($word, $r1);
+
+  return $word;
+}
+
+function swedishstemmer_step1($word, $r1) {
+  // Step 1:
+  // Search for the longest among the following suffixes in R1, and perform the action indicated.
+  if ($r1) {
+    $word = preg_replace(array_reverse(array('/a$/', '/arna$/', '/erna$/', '/heterna$/', '/orna$/', '/ad$/', '/e$/', '/ade$/', '/ande$/', '/arne$/', '/are$/', '/aste$/', '/en$/', '/anden$/', '/aren$/', '/heten$/', '/ern$/', '/ar$/', '/er$/', '/heter$/', '/or$/', '/as$/', '/arnas$/', '/ernas$/', '/ornas$/', '/es$/', '/ades$/', '/andes$/', '/ens$/', '/arens$/', '/hetens$/', '/erns$/', '/at$/', '/andet$/', '/het$/', '/ast$/')), '', $word, 1);
+  }
+
+  // Delete 's' if preceded by a valid s-ending
+  $word = preg_replace('/([bcdfghjklmnoprtvy])s$/', '\\1', $word);
+
+  return $word;
+}
+
+function swedishstemmer_step2($word, $r1) {
+  // Step 2:
+  // Search for one of the following suffixes in R1, and if found delete the last letter.
+  if ($r1) {
+    $word = preg_match('/(dd|gd|nn|dt|gt|kt|tt)$/', $word) ? substr($word, 0, -1) : $word;
+  }
+
+  return $word;
+}
+
+function swedishstemmer_step3($word, $r1) {
+  // Step 3:
+  // Search for the longest among the following suffixes in R1, and perform the action indicated.
+  if ($r1) {
+    $word = preg_replace('/(lig|ig|els)$/', '', $word);
+    $word = preg_replace('/löst$/', 'lös', $word);
+    $word = preg_replace('/fullt$/', 'full', $word);
+  }
+
+  return $word;
+}

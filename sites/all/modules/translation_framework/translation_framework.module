@@ -1,0 +1,166 @@
+<?php
+// $Id: translation_framework.module,v 1.1.2.12 2009/04/23 22:18:03 darrenferguson Exp $
+
+/**
+ * @file
+ * Module providing on the fly node translation
+ */
+define('TRANSLATION_FRAMEWORK_PATH', drupal_get_path('module', 'translation_framework'));
+define('TRANSLATION_FRAMEWORK_API',  variable_get('translation_framework_api', ''));
+
+/**
+ * Implementation of hook_help().
+ */
+function translation_framework_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case 'admin/modules#name':
+      $output = t('node translation');
+      break;
+    case 'admin/modules#description':
+      $output = t('Provides a modular translation framework for the drupal platform');
+      break;
+    case 'admin/help#translation_framework':
+      $output = '<p>'. t('Allows you to make on the fly translations based off the specific API specified') .'</p>';
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_init()
+ */
+function translation_framework_init() {
+  drupal_add_css(TRANSLATION_FRAMEWORK_PATH .'/translation_framework.css');
+}
+
+/**
+ * Implementation of hook_perm()
+ */
+function translation_framework_perm() {
+  return array('administer translation framework');
+}
+
+/**
+ * Implementation of hook_menu()
+ */
+function translation_framework_menu() {
+  $items['admin/translation_framework'] = array(
+    'title'            => 'Translation Framework',
+    'access arguments' => array('administer translation framework'),
+    'description'      => 'Administer translation framework modules',
+    'page callback'    => 'system_admin_menu_block_page',
+    'file'             => 'system.admin.inc',
+    'file path'        => drupal_get_path('module', 'system'),
+  );
+  $items['admin/translation_framework/settings'] = array(
+    'title'            => 'Settings',
+    'description'      => 'Configure Translation Framework module',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('translation_framework_admin_settings'),
+    'access arguments' => array('administer translation framework'),
+    'file'             => 'translation_framework.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Retrieve all available apis
+ *
+ * @param $api
+ *      The translation api we wish to retrieve the information about
+ * @param $property
+ *      The property of the translation api we wish to find
+ * @param $refresh
+ *      Determine whether we refresh the info cache or not
+ */
+function translation_framework_apis($api = NULL, $property = NULL, $refresh = FALSE) {
+  static $info;
+  if (!$info || $refresh) {
+    $info = module_invoke_all('translation_realtime', 'info');
+  }
+  // checks to see if we are looking for specific information or not
+  if ($api && $property) {
+    return $info[$api][$property];
+  } elseif ($api) {
+    return $info[$api];
+  }
+  return $info;
+}
+
+/**
+ * Send the information for translation and return the object with the translated string back to them
+ *
+ * @param $translate
+ *      Translate object with pertinent fields set and will be returned
+ *
+ * @return $translate
+ *      The translation object that we wished to translate
+ */
+function translation_framework_translate($translate) {
+  $info = translation_framework_apis(TRANSLATION_FRAMEWORK_API);
+  // make sure there is a translation function for the api and if so we can continue
+  if ($info && function_exists($info['translate'])) {
+    // check if there is a pre process function that should be called before translation
+    if (function_exists($info['preprocess'])) {
+      $translate = call_user_func($info['preprocess'], $translate);
+    }
+    // perform the translation, this will set the $translate->translation field on success
+    $translate = call_user_func($info['translate'], $translate);
+    // check if there is a post process function that should be called after translation
+    if (function_exists($info['postprocess'])) {
+      $translate = call_user_func($info['postprocess'], $translate);
+    }
+  }
+  return $translate;
+}
+
+/**
+ * Function is called by outside functions to translate information
+ *
+ * @param $data
+ *      The data we wish to translate
+ * @param $src
+ *      The source language
+ * @param $dst
+ *      The destination lanugage
+ *
+ * @return Returns the translated text of original text depending on what occurs
+ */
+function translation_framework_translate_send($data, $src, $dst) {
+  // checking to make sure the src and the dst are not the same if so return original data
+  if ($src == $dst) {
+    return $data;
+  }
+
+  // create the new translation object for use
+  $translate = new stdClass();
+  $translate->data = $data; // data we wish to translate
+  $translate->src = $src; // the language the data currently is in
+  $translate->dst = $dst; // language we wish to translate the data into
+  $translate->translation = NULL; // where the translated data will be
+  $translate->error_code = NULL; // setting error code to null incase there is one
+  $translate->error_msg = NULL; // setting the error message to null
+
+  // send the object down the framework for the relevant translation
+  $translate = translation_framework_translate($translate);
+  // if we receive an error then we need to return the original string
+  if ($translate->error_code || $translate->error_msg) {
+    return $data;
+  }
+  // return the translated string
+  return $translate->translation;
+}
+
+/**
+ * Function will return an array of the available languages supported by the translation API
+ *
+ * @return Array in the format array('en' => 'English', 'fr' => 'French') or empty array
+ */
+function translation_framework_languages($include = FALSE) {
+  $info = translation_framework_apis(TRANSLATION_FRAMEWORK_API);
+  if ($info && function_exists($info['languages'])) {
+    return call_user_func($info['languages'], $include);
+  }
+  return array();
+}

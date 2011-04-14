@@ -1,0 +1,7 @@
+<?php
+ 
+; $Id$
+name = Egna funktioner i modul
+description = Denna modul låter dig föndra lite allt mööjligt. Typ.
+core = 6.x
+package = "Egna" 

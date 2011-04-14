@@ -1,0 +1,17 @@
+// $Id: CHANGELOG.txt,v 1.6 2009/12/13 19:00:29 davereid Exp $
+
+Form x.x-x.x, xxxx-xx-xx
+------------------------
+
+
+Form 6.x-1.x, xxxx-xx-xx
+------------------------
+#655428 by Dave Reid: Skip AJAX forms that do not provide $form['form_id'] or
+  $form['build_form_id'].
+#651636 by hefox, Dave Reid: Prefix menu path with admin/.
+#652820 by jcmarco, Dave Reid: Fixed duplication of $form['#prefix'].
+#642936 by Dave Reid: Added a 'cancel' button to redirect back to the referrer.
+#651608 by hefox, Dave Reid, jcmarco: Moved example to form__test.module and
+  removed contact module dependency.
+#602600 by sun: Revamped module; pre-alpha code to support many implementations.
+#602600 by sun: Forked from form_controller project.

@@ -1,0 +1,28 @@
+<?php
+ 
+ 
+function exposedviewsformalter_form_alter(&$form, $form_state, $form_id) {
+ 
+if($form['#id'] == 'view-display-id-page_1') {
+
+//Add or Undo slashes to show or hide form variables
+echo "<pre>";
+print_r($form);
+echo "</pre>";
+
+$form['fritext']['#size'] = '61';
+
+ 
+}
+if($form['#id'] == 'views-exposed-form-Sokfunktion-default') {
+
+
+$form['fritext']['#size'] = '61';
+
+ 
+}
+
+
+
+ 
+}

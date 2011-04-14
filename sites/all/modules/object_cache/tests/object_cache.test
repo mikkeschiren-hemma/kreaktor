@@ -1,0 +1,215 @@
+<?php
+// $Id: object_cache.test,v 1.1.2.1 2010/12/21 12:58:48 swentel Exp $
+
+/**
+ * @file
+ * Test file for Object Cache.
+ */
+
+class ObjectCacheTest extends DrupalWebTestCase {
+
+  function getInfo() {
+    return array(
+      'name' => t('Object cache functional tests'),
+      'description' => t('Functional tests for the object cache module.'),
+      'group' => t('Object cache'),
+    );
+  }
+
+  public function setUp() {
+    parent::setUp('object_cache', 'comment');
+    $this->privileged_user = $this->drupalCreateUser(array(
+      'administer nodes',
+      'administer users',
+      'administer comments',
+      'post comments',
+      'post comments without approval',
+    ));
+    $this->drupalLogin($this->privileged_user);
+    variable_set('comment_preview_story', COMMENT_PREVIEW_OPTIONAL);
+
+  }
+
+  /**
+   * Test object cache on nodes, comments and users.
+   */
+  function testObjectCache() {
+
+    $this->node = $this->drupalCreateNode(array('type' => 'story'));
+
+    // Get the node and ensure the node is in the cached_objects table.
+    $this->getCachedObject('node', $this->node->nid);
+
+    // Edit the node title and
+    // 1. ensure the node is wiped from the cache_objects table.
+    // 2. ensure the object cache is updated when retrieving.
+    $edit = array('title' => 'updated node 1');
+    $this->drupalPost('node/'. $this->node->nid .'/edit', $edit, t('Save'));
+    $this->checkCachedObject('node', $this->node->nid);
+    $this->getCachedObject('node', $this->node->nid, 'nid', TRUE);
+    $this->assertEqual($edit['title'], $this->cached_object->title, t('Title has been updated to "'. $this->cached_object->title .'"'));
+
+    // Add a comment and
+    // 1. ensure the node is wiped from the cache_objects table.
+    // 2. the node info with the number of comments is set to 1.
+    $this->assertEqual(0, $this->cached_object->comment_count, t('Comment count set to 0'));
+    $this->comment = $this->postComment($this->node);
+    $this->checkCachedObject('node', $this->node->nid);
+    $this->getCachedObject('node', $this->node->nid, 'nid', TRUE);
+    $this->assertEqual(1, $this->cached_object->comment_count, t('Comment count set to 1'));
+
+    // Get the comment and ensure the comment is in the cached_objects table.
+    $this->checkCachedObject('comment', $this->comment->id);
+    $this->getCachedObject('comment', $this->comment->id, 'cid');
+    $this->assertFalse(isset($this->cached_object->picture), t('User info not loaded on object'));
+
+    // Get the comment and user info and ensure the comment is in the cached_objects table.
+    $this->checkCachedObject('comment_user', $this->comment->id);
+    $this->getCachedObject('comment_user', $this->comment->id, 'cid');
+    $this->assertTrue(isset($this->cached_object->picture), t('User info loaded on object'));
+
+    // Edit the comment and
+    // 1. ensure the node is wiped from the cache_objects table.
+    // 2. ensure the comment is wiped from the cache_objects table.
+    // 3. ensure the object cache is update when retrieving.
+    $edit = array('subject' => 'update comment 1');
+    $this->drupalPost('comment/edit/'. $this->comment->id, $edit, t('Save'));
+    $this->checkCachedObject('node', $this->node->nid);
+    $this->checkCachedObject('comment', $this->comment->id);
+    $this->checkCachedObject('comment_user', $this->comment->id);
+    $this->getCachedObject('comment', $this->comment->id, 'cid', TRUE);
+    $this->assertEqual($this->cached_object->subject, $edit['subject'], t('Subject has been updated'));
+
+    // Delete the comment and
+    // 1. ensure the comment is wiped from the cache_objects table.
+    // 2. the node is wiped from the cache_objects table.
+    // 3. the number of comments is set to 0.
+    $edit = array();
+    $this->drupalPost('comment/delete/'. $this->comment->id, $edit, t('Delete'));
+    $this->checkCachedObject('node', $this->node->nid);
+    $this->checkCachedObject('comment', $this->comment->id);
+    $this->checkCachedObject('comment_user', $this->comment->id);
+    $this->getCachedObject('node', $this->node->nid, 'nid', TRUE);
+    $this->assertEqual(0, $this->cached_object->comment_count, t('Comment count set to 0'));
+
+    // Add the comment again we can check later on when deleting the node.
+    $this->comment = $this->postComment($this->node);
+    $this->checkCachedObject('comment', $this->comment->id);
+    $this->getCachedObject('comment', $this->comment->id, 'cid');
+    $this->checkCachedObject('comment_user', $this->comment->id);
+    $this->getCachedObject('comment_user', $this->comment->id, 'cid');
+
+    // Delete the node and ensure the node is wiped from the cache_objects table.
+    $edit = array();
+    $this->drupalPost('node/'. $this->node->nid .'/delete', $edit, t('Delete'));
+    $this->checkCachedObject('node', $this->node->nid);
+
+    // Create and get user and ensure the user is in the cached_objects table.
+    $this->new_user = $this->drupalCreateUser(array('access content'));
+    $this->getCachedObject('user', $this->new_user->uid, 'uid');
+
+    // Update user and ensure the user is wiped from the cached_objects table.
+    $edit = array('name' => 'update user 1');
+    $this->drupalPost('user/'. $this->new_user->uid .'/edit', $edit, t('Save'));
+    $this->checkCachedObject('user', $this->new_user->uid);
+    $this->getCachedObject('user', $this->new_user->uid, 'uid', TRUE);
+    $this->assertEqual($this->cached_object->name, $edit['name'], t('User name has been updated.'));
+
+    // Delete the user and ensure the user is wiped from the cached_objects table.
+    $edit = array();
+    $this->drupalPost('user/'. $this->new_user->uid .'/delete', $edit, t('Delete'));
+    $this->checkCachedObject('user', $this->new_user->uid);
+
+    // Test with the settings.php settings for higher cache rates.
+  }
+
+  /**
+   * Test exit strategy via $conf.
+   */
+  function testExitStrategy() {
+
+    // Set the variable.
+    variable_set('object_cache_hook_exit_node', array('story'));
+
+    // Create story node.
+    $this->node = $this->drupalCreateNode(array('type' => 'story'));
+
+    // Get the node and ensure the node is in the cached_objects table.
+    $this->getCachedObject('node', $this->node->nid);
+
+    // Edit the node title and
+    // 1. ensure the node is in the object cache.
+    // 2. ensure the object cache is updated when retrieving.
+    $edit['title'] = 'Updated node 1';
+    $this->drupalPost('node/'. $this->node->nid .'/edit', $edit, t('Save'));
+    $this->checkCachedObject('node', $this->node->nid, TRUE);
+    $this->getCachedObject('node', $this->node->nid, 'nid', TRUE);
+    $this->assertEqual($edit['title'], $this->cached_object->title, t('Title has been updated to "'. $this->cached_object->title .'"'));
+  }
+
+  /**
+   * Get an object with object cache.
+   *
+   * @param $type
+   *   The name of the object we want to retrieve, used as the first part
+   *   to construct the cid. Possible type is node, user, your own object.
+   * @param $id
+   *   The id of the object to retrieve, used as the second part to
+   *   construct the cid. Will be nid for node, uid for users etc.
+   * @param $key
+   *   The property on the object we want to check the $id with.
+   * @param $reset
+   *   Wheter to reset the internal cache.
+   */
+  function getCachedObject($type, $id, $key = 'nid', $reset = FALSE) {
+    $this->cached_object = object_cache_get($type, $id, CACHE_PERMANENT, '', $reset);
+    $this->assertEqual($this->cached_object->{$key}, $id, t('Object retrieved with object cache function'));
+    $cid = $type .':'. $id;
+    $found = db_result(db_query("SELECT cid FROM {cache_objects} WHERE cid = '%s'", $cid));
+    $this->assertTrue($found, t('Object '. $type . ' with cid '. $cid .' found in cache_objects table.'));
+  }
+
+  /**
+   * Ensure an object is cached or wiped from the cache_objects table.
+   *
+   * @param $type
+   *   The name of the object we want to retrieve, used as the first part
+   *   to construct the cid. Possible type is node, user, your own object.
+   * @param $id
+   *   The id of the object to retrieve, used as the second part to
+   *   construct the cid. Will be nid for node, uid for users etc.
+   * @param $cached
+   *   Whether the object should be cached or not.
+   */
+  function checkCachedObject($type, $id, $cached = FALSE) {
+    $cid = $type .':'. $id;
+    $found = db_result(db_query("SELECT cid FROM {cache_objects} WHERE cid = '%s'", $cid));
+    if (!$cached) {
+      $this->assertFalse($found, t('Object '. $type . ' with cid '. $cid .' wiped from cache_objects table.'));
+    }
+    else {
+      $this->assertTRUE($found, t('Object '. $type . ' with cid '. $cid .' cached in cache_objects table.'));
+    }
+  }
+
+  /**
+   * Post comment.
+   *
+   * @param $node
+   *   Node to post the comment on.
+   */
+  function postComment($node) {
+    $edit = array();
+    $edit['subject'] = $this->randomString();
+    $edit['comment'] = $this->randomString();
+
+    $this->drupalPost('comment/reply/' . $node->nid, $edit, t('Save'));
+    $match = array();
+    // Get comment ID
+    preg_match('/#comment-([0-9]+)/', $this->getURL(), $match);
+
+    if (isset($match[1])) {
+      return (object) array('id' => $match[1], 'subject' => $edit['subject'], 'comment' => $edit['comment']);
+    }
+  }
+}

@@ -1,0 +1,13 @@
+; $Id: google_translation.info,v 1.1.2.7 2009/04/23 22:18:03 darrenferguson Exp $
+name = Google Translation
+description = Provides an API for Google Translation
+package = Translation Framework
+dependencies[] = translation_framework
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-04-23
+version = "6.x-1.2"
+core = "6.x"
+project = "translation_framework"
+datestamp = "1240525573"
+

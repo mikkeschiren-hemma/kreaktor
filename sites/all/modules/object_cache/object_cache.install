@@ -1,0 +1,29 @@
+<?php
+// $Id: object_cache.install,v 1.1.2.1 2011/01/19 10:03:41 swentel Exp $
+
+/**
+ * @file
+ * Object cache install file.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function object_cache_install() {
+  drupal_install_schema('object_cache');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function object_cache_uninstall() {
+  drupal_uninstall_schema('object_cache');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function object_cache_schema() {
+  $schema['cache_objects'] = drupal_get_schema_unprocessed('system', 'cache');
+  return $schema;
+}

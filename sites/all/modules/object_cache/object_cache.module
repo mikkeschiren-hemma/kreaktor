@@ -1,0 +1,222 @@
+<?php
+// $Id: object_cache.module,v 1.1.2.3 2010/12/21 13:00:53 swentel Exp $
+
+/**
+ * @file
+ * Object cache functions.
+ */
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function object_cache_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
+  switch ($op) {
+    case 'update':
+    case 'delete':
+    case 'delete revision':
+      cache_clear_all('node:'. $node->nid, 'cache_objects');
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_comment().
+ */
+function object_cache_comment(&$a1, $op) {
+  switch ($op) {
+    case 'update':
+    case 'delete':
+    case 'publish':
+    case 'unpublish':
+      if (is_object($a1)) {
+        $comment = (array)drupal_clone($a1);
+      }
+      else {
+        $comment = $a1;
+      }
+      if (!empty($comment['nid']) && ($node = node_load($comment['nid']))) {
+        cache_clear_all('node:'. $comment['nid'], 'cache_objects');
+        cache_clear_all('comment:'. $comment['cid'], 'cache_objects');
+        cache_clear_all('comment_user:'. $comment['cid'], 'cache_objects');
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_user().
+ */
+function object_cache_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'update':
+    case 'delete':
+      cache_clear_all('user:'. $account->uid, 'cache_objects');
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_flush_caches().
+ */
+function object_cache_flush_caches() {
+  return array('cache_objects');
+}
+
+/**
+ * Implementation of hook_views_api().
+ */
+function object_cache_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'object_cache') .'/views',
+  );
+}
+
+/**
+ * Object cache get.
+ *
+ * Gets an object from the cache_objects table. If not found, it
+ * will load the object and save it also into the cache_objects table.
+ * The objects are also kept static, so multiple calls can be made to
+ * this function.
+ *
+ * @param $type
+ *   The name of the object we want to retrieve, used as the first part
+ *   to construct the cid. Possible type is node, user, your own object.
+ * @param $id
+ *   The id of the object to retrieve, used as the second part to
+ *   construct the cid. Will be nid for node, uid for users etc.
+ * @param $expire
+ *   One of the following values:
+ *   - CACHE_PERMANENT: Indicates that the item should never be removed unless
+ *     explicitly told to using cache_clear_all() with a cache ID.
+ *   - CACHE_TEMPORARY: Indicates that the item should be removed at the next
+ *     general cache wipe.
+ *   - A Unix timestamp: Indicates that the item should be kept at least until
+ *     the given time, after which it behaves like CACHE_TEMPORARY.
+ * @param $headers
+ *   A string containing HTTP header information for cached pages.
+ * @param $reset
+ *   Wheter to reset the internal cache.
+ *
+ * @return
+ *   A full object either from cache or directly loaded.
+ */
+function object_cache_get($type, $id, $expire = CACHE_PERMANENT, $headers = NULL, $reset = FALSE) {
+  static $objects = array();
+
+  if ($reset) {
+    $objects = array();
+  }
+
+  $cid = $type .':'. $id;
+
+  if (!isset($objects[$cid]['check'])) {
+    $objects[$cid]['check'] = TRUE;
+
+    if ($cache = cache_get($cid, 'cache_objects')) {
+      $objects[$cid]['data'] = $cache->data;
+    }
+    else {
+      // We use module_invoke here so if other modules want to use
+      // this API, they simply need to create a function like this:
+      // object_cache_TYPE_load($id);
+      // That function returns their object and will be cached
+      // by the object cache module. Object cache itself has a few
+      // of these funtions for nodes and users to start with.
+      $new_data = module_invoke('object_cache', $type . '_load', $id, $reset);
+      if ($new_data) {
+        cache_set($cid, $new_data, 'cache_objects', $expire, $headers);
+        $objects[$cid]['data'] = $new_data;
+      }
+    }
+  }
+
+  return $objects[$cid]['data'];
+}
+
+/**
+ * Load the entire node by nid.
+ *
+ * @param $nid
+ *   The identifying node id.
+ * @param $reset
+ *   Wheter to reset the internal cache (if any).
+ * @return
+ *   The node object.
+ */
+function object_cache_node_load($nid, $reset) {
+  return node_load($nid, NULL, $reset);
+}
+
+/**
+ * Load the entire user by uid.
+ *
+ * @param $uid
+ *   The identifying user id.
+ * @param $reset
+ *   Wheter to reset the internal cache (if any).
+ * @return
+ *   The user object.
+ */
+function object_cache_user_load($uid, $reset) {
+  return user_load($uid);
+}
+
+/**
+ * Load the entire comment by cid.
+ *
+ * @param $id
+ *   The identifying comment id.
+ * @param $reset
+ *   Wheter to reset the internal cache (if any).
+ * @return
+ *   The comment object.
+ */
+function object_cache_comment_load($id, $reset) {
+  return _comment_load($id);
+}
+
+/**
+ * Load the entire comment by cid and the user from the comment.
+ *
+ * @param $id
+ *   The identifying comment id.
+ * @param $reset
+ *   Wheter to reset the internal cache (if any).
+ * @return
+ *   The comment object with the user info.
+ */
+function object_cache_comment_user_load($cid, $reset) {
+  return db_fetch_object(db_query('SELECT * FROM {comments} c INNER JOIN {users} u ON u.uid = c.uid WHERE cid = %d', $cid));
+}
+
+/**
+ * Implements hook_exit().
+ */
+function object_cache_exit($destination = NULL) {
+  // Cache nodes when a node_load happens in the menu callback. By default this is off. No configuration interface is provided.
+  $cache_node_types = variable_get('object_cache_hook_exit_node', array());
+  if (is_array($cache_node_types) && !empty($cache_node_types)) {
+    $node = menu_get_object();
+    if ($node && arg('2') == '' && in_array($node->type, $cache_node_types)) {
+      object_cache_get('node', $node->nid);
+    }
+  }
+
+  // Cache users a user_load (or variant) happens in the menu callback. By default this is off. No configuration interface is provided.
+  $cache_user = variable_get('object_cache_hook_exit_user', FALSE);
+  if ($cache_user && arg(0) == 'user' && arg(2) == '') {
+    // try to fetch user
+    $user = menu_get_object('user');
+    if (!$user) {
+      $user = menu_get_object('user_uid_optional');
+    }
+
+    // cache the user if found
+    if ($user) {
+      object_cache_get('user', $user->uid);
+    }
+  }
+}
+

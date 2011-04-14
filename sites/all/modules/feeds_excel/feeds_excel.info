@@ -1,0 +1,13 @@
+name = Feeds Excel Parser
+description = Excel file parser for importing excel data via feeds.module
+package = Feeds
+dependencies[] = feeds
+dependencies[] = token
+core = 6.x
+
+; Information added by drupal.org packaging script on 2011-02-25
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "feeds_excel"
+datestamp = "1298619245"
+

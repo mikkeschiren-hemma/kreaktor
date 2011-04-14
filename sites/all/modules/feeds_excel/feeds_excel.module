@@ -1,0 +1,181 @@
+<?php
+
+/**
+* Implementation of hook_feeds_plugins().
+*/
+function feeds_excel_feeds_plugins() {
+  $info = array();
+  $info['ExcelParser'] = array(
+    'name' => 'Excel parser',
+    'description' => 'Parses an excel file.',
+    'handler' => array(
+      'parent' => 'FeedsParser', // A plugin needs to derive either directly or indirectly from FeedsFetcher, FeedsParser or FeedsProcessor.
+      'class' => 'FeedsExcelParser',
+      'file' => 'ExcelParser.inc',
+      'path' => drupal_get_path('module', 'feeds_excel'),
+    ),
+  );
+  return $info;
+}
+
+/**
+ * Implementation of hook_enable().
+ *
+ * @see http://drupal.org/node/622700
+ */
+function feeds_excel_enable() {
+  //clear the cache to display in Feeds as available plugin.
+  cache_clear_all('plugins:feeds:plugins', 'cache');
+}
+
+/**
+ * Helper wrapper for library inclusion.
+ */
+function _feeds_excel_get_libraries() {
+  // Import the external library
+  $path = $_SERVER['DOCUMENT_ROOT'] . base_path() . drupal_get_path('module', 'feeds_excel'). '/libraries/phpExcelReader/Excel/';
+  require_once($path.'reader.php');
+  require_once($path.'oleread.inc');
+}
+
+/**
+ * Implementation of hook_form_alter().
+ *
+ * Adds token legend to feeds UI mapping form.
+ */
+function feeds_excel_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'feeds_ui_mapping_form') {
+    $config = $form['#importer']->getConfig();
+    if ($config['parser']['plugin_key'] == 'ExcelParser') {
+
+      $form['legend_sources'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Legend sources'),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        'excel_file' => array('#value' => theme('token_help', 'excel_file')),
+        'excel_sheet' => array('#value' => theme('token_help', 'excel_sheet')),
+      );
+      switch ($config['parser']['config']['mapping_mode']) {
+        case 'rows':
+          $form['legend_sources']['excel_row'] = array('#value' => theme('token_help', 'excel_row'));
+          break;
+        case 'columns':
+          $form['legend_sources']['excel_column'] = array('#value' => theme('token_help', 'excel_column'));
+          break;
+      }
+
+      $form['legend_sources']['global'] = array('#value' => theme('token_help', 'global'));
+
+      if ($config['content_type']) {
+        $form['legend_sources']['parent_node'] = array(
+          '#type' => 'fieldset',
+          '#title' => t('Parent node'),
+          '#description' => t('Information about the node the form is attached to, see "Basic Settings" for this importer.'),
+          '#value' => theme('token_help', 'node', '[parent:', ']'),
+          '#collapsible' => TRUE,
+          '#collapsed' => TRUE,
+        );
+      }
+    }
+  }
+}
+
+
+/**
+ * Implementation of hook_token_list().
+ */
+function feeds_excel_token_list($type = 'all') {
+  $tokens = array();
+
+  if ($type == 'excel_file' || $type == 'all') {
+    $tokens['excel']['excel-filepath']  = t("The path the excel file is located.");
+    $tokens['excel']['excel-fileurl']  = t("The absolute url the excel file is located.");
+  }
+  if ($type == 'excel_sheet' || $type == 'all') {
+    $tokens['excel_sheet']['sheet-id'] = t("Id of the sheet within the excel file.");
+    $tokens['excel_sheet']['sheet-name-raw'] = t('Sheet name - raw user imput');
+    $tokens['excel_sheet']['sheet-name'] = t('Sheet name');
+    $tokens['excel_sheet']['sheet-cell-1-1-raw'] = t('Raw data of the given cell within the sheet.');
+    $tokens['excel_sheet']['sheet-cell-1-1'] = t('Formatted string of the given cell within the sheet.');
+  }
+  if ($type == 'excel_row' || $type == 'all') {
+    $tokens['excel-row']['row'] = t('Number of row.');
+    //$tokens['excel-row']['cells'] = t('Number of cells in row item.');
+    $tokens['excel-row']['range-id'] = t('ID of the define Range of config "iterative"');
+    $tokens['excel-row']['column-offset'] = t('Column offset of row item.');
+    $tokens['excel-row']['column-1-raw'] = t('Raw data out of given column (1) in current range\'s row.');
+    $tokens['excel-row']['column-1'] = t('Formatted data out of given column (1) in current range\'s row.');
+    $tokens['excel-row']['x-1-raw'] = t('Raw data of cell with given position (1 for first cell) in row.');
+    $tokens['excel-row']['x-1'] = t('Formatted data of cell with given position (1 for first cell) in row.');
+  }
+  if ($type == 'excel_column' || $type == 'all') {
+    $tokens['excel-column']['row-1-raw'] = t('Raw data out of given column in current range\'s column.');
+    $tokens['excel-column']['row-1'] = t('Formatted data out of given column in current range\'s column.');
+    $tokens['excel-column']['y-1-raw'] = t('Raw data of cell with given position in item (1 for first cell in column).');
+    $tokens['excel-column']['y-1'] = t('Formatted data of cell with given position in item (1 for first cell in column).');
+    $tokens['excel-column']['column'] = t('Number of column.');
+    $tokens['excel-column']['column-alpha'] = t('Alpha value of column.');
+    //$tokens['excel-column']['cells'] = t('Number of cells in column item.');
+    $tokens['excel-column']['row-offset'] = t('Row offset of column item.');
+  }
+
+  return $tokens;
+}
+
+/**
+ * Implementation of hook_token_values().
+ */
+function feeds_excel_token_values($type, $object = NULL) {
+  $values = array();
+  switch ($type) {
+    case 'excel_file':
+      $values['excel-filepath'] = check_url($object->filepath);
+      $values['excel-fileurl'] = url($object->filepath, array('absolute' => TRUE));
+      break;
+    case 'excel_sheet':
+      $values['sheet-id'] = check_plain($object->id);
+      $values['sheet-name-raw'] = $object->name;
+      $values['sheet-name'] = check_plain($object->name);
+      if (is_array($object->fixed_cells)) {
+        foreach ($object->fixed_cells as $id => $cell) {
+          $key = 'sheet-cell-'. $cell['row'] .'-'. $cell['column'];
+          $values[$key .'-raw'] = $cell['raw'];
+          $values[$key] = $cell['value'];
+        }
+      }
+      break;
+    case 'excel_row':
+      $values['row'] = $object->row;
+      $values['range-id'] = $object->meta['range_id'];
+      $values['column-offset'] = $object->meta['range_col_offset'];
+
+      if (is_array($object->cells)) {
+        foreach ($object->cells as $cell) {
+          $raw = $cell['raw'];
+          $formatted = check_plain($cell['value']);
+          $values['column-'. $cell['column'] .'-raw'] = $raw;
+          $values['column-'. $cell['column']] = $formatted;
+          $values['x-'. $cell['x'] .'-raw'] = $raw;
+          $values['x-'. $cell['x']] = $formatted;
+        }
+      }
+      break;
+    case 'excel_column':
+      $values['column'] = $object->column;
+      $values['column-alpha'] = ExcelRange::num2alpha($object->column);
+      $values['range-id'] = $object->meta['range_id'];
+      $values['row-offset'] = $object->meta['range_row_offset'];
+
+      foreach ($object->cells as $cell) {
+        $raw = $cell['raw'];
+        $formatted = check_plain($cell['value']);
+        $values['row-'. $cell['row'] .'-raw'] = $raw;
+        $values['row-'. $cell['row']] = $formatted;
+        $values['y-'. $cell['y'] .'-raw'] = $raw;
+        $values['y-'. $cell['y']] = $formatted;
+      }
+      break;
+  }
+  return $values;
+}
