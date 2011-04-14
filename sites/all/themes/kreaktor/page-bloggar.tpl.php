@@ -157,10 +157,7 @@ $block = module_invoke('block', 'block' , 'view', 12);
 print $block['content']; 
 ?>
 
-<?php 
 
-
-?>
 
                                 <?php if ($content): ?>
                                 <div id="content-content" class="content-content">

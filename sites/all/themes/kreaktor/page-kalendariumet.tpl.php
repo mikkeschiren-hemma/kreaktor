@@ -165,6 +165,17 @@ print $block['content'];
                                 <?php if ($content): ?>
                                 <div id="content-content" class="content-content">
                                   <?php print $content; ?>
+                                
+								  
+<p class="skapanykalendariepost">
+<a href="
+<?php
+print '/node/add/kalendarie/' . $_GET['grundnod'] . '?destination=node/' . $_GET['grundnod'];
+?>
+">Skapa ny kalendariepost</a>
+
+</p>
+                                  
                                   <?php print $feed_icons; ?>
                                 </div><!-- /content-content -->
                                 <?php endif; ?>
